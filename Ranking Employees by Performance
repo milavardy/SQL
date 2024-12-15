@@ -1,0 +1,43 @@
+-- Create a temporary table to calculate performance scores
+WITH Performance_Scores AS (
+    SELECT 
+        e.employee_id,
+        e.name AS employee_name,
+        SUM(t.task_score) AS total_score,
+        AVG(t.completion_time) AS avg_completion_time,
+        COUNT(t.task_id) AS tasks_completed
+    FROM 
+        employees e
+    JOIN 
+        tasks t
+        ON e.employee_id = t.employee_id
+    WHERE 
+        t.completion_status = 'Completed' -- Only count completed tasks
+    GROUP BY 
+        e.employee_id, e.name
+),
+
+-- Rank employees based on total score and tie-break with average completion time
+Ranked_Employees AS (
+    SELECT 
+        ps.employee_id,
+        ps.employee_name,
+        ps.total_score,
+        ps.avg_completion_time,
+        ps.tasks_completed,
+        RANK() OVER (ORDER BY ps.total_score DESC, ps.avg_completion_time ASC) AS performance_rank
+    FROM 
+        Performance_Scores ps
+)
+
+-- Output the final leaderboard
+SELECT 
+    performance_rank,
+    employee_name,
+    total_score,
+    ROUND(avg_completion_time, 2) AS avg_completion_time,
+    tasks_completed
+FROM 
+    Ranked_Employees
+ORDER BY 
+    performance_rank;
